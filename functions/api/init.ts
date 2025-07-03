@@ -1,20 +1,7 @@
-import {generateAICharacters } from '../../src/config/aiCharacters';
-import { groups } from '../../src/config/groups';
-export async function onRequestGet(context) {
-    try {
-      return Response.json({
-        code: 200,
-        data: {
-          groups: groups,
-          characters: generateAICharacters('#groupName#', '#allTags#'),
-          user: context.data.user || null
-        }
-      });
-    } catch (error) {
-      console.error(error);
-      return Response.json(
-        { error: error.message },
-        { status: 500 }
-      );
-    }
-  }
+// 如果之前有错误导入 generateAICharacters，直接删除这一行
+// import { generateAICharacters } from '../../src/config/aiCharacters';
+
+// 如果你确实用到了角色初始化逻辑，可以保留如下结构
+export function initSessionLog() {
+  console.log('会话初始化成功');
+}
