@@ -23,6 +23,7 @@ import Sidebar from './Sidebar';
 import { AdBanner, AdBannerMobile } from './AdSection';
 import { useUserStore } from '@/store/userStore';
 import { getAvatarData } from '@/utils/avatar';
+import { AICharacter } from '@/config/aiCharacters';
 
 
 // 修改 KaTeXStyle 组件
@@ -51,6 +52,42 @@ const KaTeXStyle = () => (
     @import "katex/dist/katex.min.css";
   `}} />
 );
+
+// 👇 添加
+async function getModeratorInstructions(moderator: AICharacter, history: any[]): Promise<{
+  selectedAIs: string[];
+  shouldContinue: boolean;
+}> {
+  const response = await request('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: moderator.model,
+      message: '你是主持人，请选择本轮发言AI，并决定是否继续讨论。格式：{\"selectedAIs\": [\"ai5\"], \"shouldContinue\": true}',
+      personality: moderator.personality,
+      history,
+      aiName: moderator.name,
+      custom_prompt: moderator.custom_prompt + `\n请严格返回 JSON 格式。`
+    })
+  });
+
+  const reader = response.body?.getReader();
+  const decoder = new TextDecoder();
+  let resultText = '';
+  while (true) {
+    const { done, value } = await reader!.read();
+    if (done) break;
+    resultText += decoder.decode(value);
+  }
+
+  try {
+    const jsonStr = resultText.match(/\{[\s\S]*\}/)?.[0] ?? '{}';
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    console.error('主持人解析失败', e);
+    return { selectedAIs: [], shouldContinue: false };
+  }
+}
 
 
 const ChatUI = () => {
@@ -252,11 +289,132 @@ const ChatUI = () => {
       const selectedAIs = shedulerData.selectedAIs;
       selectedGroupAiCharacters = selectedAIs.map(ai => groupAiCharacters.find(c => c.id === ai));
     }
-    for (let i = 0; i < selectedGroupAiCharacters.length; i++) {
-      //禁言
-      if (mutedUsers.includes(selectedGroupAiCharacters[i].id)) {
-        continue;
+   const moderatorId = group.moderatorId;
+const autoMode = group.autoDiscussionMode;
+
+if (moderatorId && groupAiCharacters.some(c => c.id === moderatorId)) {
+  const moderator = groupAiCharacters.find(c => c.id === moderatorId)!;
+
+  let messageHistory = messages.map(msg => ({
+    role: 'user',
+    content: msg.sender.name + '：' + msg.content,
+    name: msg.sender.name
+  }));
+
+  while (true) {
+    // 主持人发起调度
+    const { selectedAIs, shouldContinue } = await getModeratorInstructions(moderator, messageHistory);
+
+    if (selectedAIs.length === 0) break;
+
+    for (const aiId of selectedAIs) {
+      const ai = groupAiCharacters.find(c => c.id === aiId);
+      if (!ai || mutedUsers.includes(ai.id)) continue;
+
+      const aiMessage = {
+        id: messages.length + 1,
+        sender: { id: ai.id, name: ai.name, avatar: ai.avatar },
+        content: "",
+        isAI: true
+      };
+      setMessages(prev => [...prev, aiMessage]);
+
+      const response = await request('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: ai.model,
+          message: inputMessage,
+          history: messageHistory,
+          personality: ai.personality,
+          aiName: ai.name,
+          custom_prompt: ai.custom_prompt + '\n' + group.description
+        })
+      });
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let content = '';
+      while (true) {
+        const { done, value } = await reader!.read();
+        if (done) break;
+        content += decoder.decode(value);
+        setMessages(prev => {
+          const newMessages = [...prev];
+          const idx = newMessages.findIndex(m => m.id === aiMessage.id);
+          if (idx !== -1) {
+            newMessages[idx].content = content;
+          }
+          return newMessages;
+        });
       }
+
+      messageHistory.push({
+        role: 'user',
+        content: ai.name + '：' + content,
+        name: ai.name
+      });
+    }
+
+    if (!shouldContinue) {
+      // 主持人最后总结
+      const summaryMsg = {
+        id: messages.length + 100,
+        sender: { id: moderator.id, name: moderator.name, avatar: moderator.avatar },
+        content: "",
+        isAI: true
+      };
+      setMessages(prev => [...prev, summaryMsg]);
+
+      const response = await request('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: moderator.model,
+          message: '请对本次讨论做出总结',
+          history: messageHistory,
+          personality: moderator.personality,
+          aiName: moderator.name,
+          custom_prompt: moderator.custom_prompt + '\n' + group.description
+        })
+      });
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let content = '';
+      while (true) {
+        const { done, value } = await reader!.read();
+        if (done) break;
+        content += decoder.decode(value);
+        setMessages(prev => {
+          const newMessages = [...prev];
+          const idx = newMessages.findIndex(m => m.id === summaryMsg.id);
+          if (idx !== -1) {
+            newMessages[idx].content = content;
+          }
+          return newMessages;
+        });
+      }
+
+      break; // 结束循环
+    }
+
+    if (!autoMode) {
+      // 如需用户确认才继续
+      setMessages(prev => [...prev, {
+        id: messages.length + 200,
+        sender: { id: moderator.id, name: moderator.name, avatar: moderator.avatar },
+        content: '【等待用户确认后继续下一轮】',
+        isAI: true
+      }]);
+      break;
+    }
+  }
+
+  setIsLoading(false);
+  return;
+}
+
       // 创建当前 AI 角色的消息
       const aiMessage = {
         id: messages.length + 2 + i,

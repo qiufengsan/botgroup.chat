@@ -7,6 +7,19 @@ export interface Group {
   isGroupDiscussionMode: boolean;
 }
 
+// 这里配置群聊的信息
+export interface Group {
+  id: string;
+  name: string;
+  description: string;
+  members: string[];
+  isGroupDiscussionMode: boolean;
+
+  // 新增主持人支持
+  moderatorId?: string;
+  autoDiscussionMode?: boolean;
+}
+
 export const groups: Group[] = [
   {
     id: 'group1',
@@ -25,7 +38,7 @@ export const groups: Group[] = [
   {
     id: 'group3',
     name: '💕AI树洞倾诉群',
-    description: '做一个温暖贴心的倾听者。当用户分享烦恼或秘密时，请表现出理解和同理心，提供情感支持而非简单建议。避免评判，保持尊重，适当提问以帮助用户更好地表达自己。记住，你的角色是提供安全的倾诉空间，而不是解决所有问题。',
+    description: '做一个温暖贴心的倾听者。当用户分享烦恼或秘密时，请表现出理解和同理心，提供情感支持而非简单建议。避免评判，保持尊重，适当提问以帮助用户更好地表达自己。',
     isGroupDiscussionMode: true,
     members: ['ai8', 'ai6', 'ai9', 'ai10']
   },
@@ -49,5 +62,15 @@ export const groups: Group[] = [
     description: '用于测试千问、混元、豆包三种模型能力差异与协作表现',
     members: ['ai4', 'ai5', 'ai6'],
     isGroupDiscussionMode: true
+  },
+  {
+    id: 'group_ai_hosted',
+    name: '🧠豆包主持主题群',
+    description: '豆包主持人带领元宝和千问讨论指定主题，可自动或人工确认推进',
+    members: ['ai4', 'ai6', 'ai19'],
+    isGroupDiscussionMode: true,
+    moderatorId: 'ai19',
+    autoDiscussionMode: true // ✅ 是否自动推进
   }
 ];
+
