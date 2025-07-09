@@ -15,7 +15,7 @@ export const groups: Group[] = [
     members: [ 'ai8',  'ai6', 'ai7', 'ai9', 'ai10', 'ai5'],
     isGroupDiscussionMode: false
   },
-  /*
+
   {
     id: 'group2',
     name: '🎯AI成语接龙游戏群',
@@ -37,12 +37,20 @@ export const groups: Group[] = [
     isGroupDiscussionMode: false,
     members: [ 'ai5', 'ai11', 'ai12', 'ai13', 'ai14', 'ai15', 'ai16', 'ai17', 'ai18'],
   },
-  /*
+  
   {
-    id: 'group4',
+    id: 'group5',
     name: '谁是卧底游戏群',
     description: '你的抽到的词语是：#word#，请根据这个词语进行描述，但是不要说出这个词语。',
     isGroupDiscussionMode: true,
     members: [ 'ai1', 'ai5', 'ai6',  'ai9', 'ai10'],
-  }*/
+  }
+ {
+  id: 'group_ai_test',
+  name: '🧪模型能力测试群',
+  description: '用于测试千问、混元、豆包三种模型能力差异与协作表现',
+  members: ['ai4', 'ai5', 'ai6'],
+  isGroupDiscussionMode: true
+},
+
 ];
