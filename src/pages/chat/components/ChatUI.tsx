@@ -413,7 +413,7 @@ if (moderatorId && groupAiCharacters.some(c => c.id === moderatorId)) {
 
   setIsLoading(false);
   return;
-}
+
 
       // 创建当前 AI 角色的消息
       const aiMessage = {
